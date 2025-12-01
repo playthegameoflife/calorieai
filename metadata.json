@@ -1,0 +1,7 @@
+{
+  "name": "AI Meal Log & Adaptive Planner",
+  "description": "Smart nutrition app that parses food logs and generates remaining daily meal plans based on current time and macro goals.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
