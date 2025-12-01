@@ -36,6 +36,8 @@ const App: React.FC = () => {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
+  const remainingCalories = Math.max(0, goals.calories - consumed.calories);
+
   // Initial Load (Profile & Logs)
   useEffect(() => {
     const loadData = () => {
@@ -130,18 +132,36 @@ const App: React.FC = () => {
     }
   };
 
+  const handleQuickLogMeal = async (meal: MealSuggestion) => {
+    // Convert meal suggestion to a logged food item
+    const newItem: FoodItem = {
+      id: crypto.randomUUID(),
+      name: meal.name,
+      calories: meal.calories,
+      protein: meal.protein,
+      carbs: meal.carbs,
+      fat: meal.fat,
+      timestamp: new Date().toISOString()
+    };
+    
+    setLoggedFoods(prev => [...prev, newItem]);
+    
+    // Remove the meal from the plan to reflect it's been eaten
+    setMealPlan(prev => prev.filter(m => m !== meal));
+  };
+
   const handleDeleteFood = (id: string) => {
     setLoggedFoods(prev => prev.filter(f => f.id !== id));
     setMealPlan([]); // Plan is stale
   };
 
-  const handleGeneratePlan = async (instruction?: string) => {
+  const handleGeneratePlan = async (instruction?: string, mealCount?: number) => {
     setAppState(AppState.GENERATING_PLAN);
     setErrorMsg(null);
     try {
       // Small delay to allow UI to update if needed
       await new Promise(r => setTimeout(r, 100));
-      const plan = await generateAdaptivePlan(consumed, goals, new Date(), instruction);
+      const plan = await generateAdaptivePlan(consumed, goals, new Date(), instruction, mealCount);
       setMealPlan(plan);
       setAppState(AppState.IDLE);
     } catch (err) {
@@ -228,8 +248,10 @@ const App: React.FC = () => {
         {/* Generated Plan */}
         <MealPlanDisplay 
           plan={mealPlan} 
-          onGenerate={handleGeneratePlan} 
+          onGenerate={handleGeneratePlan}
+          onQuickLog={handleQuickLogMeal}
           appState={appState} 
+          remainingCalories={remainingCalories}
         />
         
         <div className="mt-8 text-center text-xs text-slate-400">
@@ -240,7 +262,7 @@ const App: React.FC = () => {
       {/* Chat Interaction */}
       <ChatAssistant 
         onLogFood={handleLogFood} 
-        onGeneratePlan={handleGeneratePlan}
+        onGeneratePlan={(instruction) => handleGeneratePlan(instruction)}
         currentContext={{ goals, consumed, mealPlan }}
       />
     </div>

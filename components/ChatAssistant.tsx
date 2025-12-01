@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, FunctionDeclaration, Type, Schema } from "@google/genai";
 import { DailyGoal, Macros, MealSuggestion } from '../types';
+import { MOCK_USER_ID } from '../constants';
 
 interface ChatAssistantProps {
   onLogFood: (text: string) => Promise<void>;
@@ -19,7 +20,18 @@ interface Message {
 
 const ChatAssistant: React.FC<ChatAssistantProps> = ({ onLogFood, onGeneratePlan, currentContext }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Initialize from LocalStorage
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(`chat_history_${MOCK_USER_ID}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse chat history");
+      return [];
+    }
+  });
+
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -31,6 +43,11 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ onLogFood, onGeneratePlan
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  // Persist to LocalStorage
+  useEffect(() => {
+    localStorage.setItem(`chat_history_${MOCK_USER_ID}`, JSON.stringify(messages));
+  }, [messages]);
 
   // Tools Definition
   const tools: FunctionDeclaration[] = [

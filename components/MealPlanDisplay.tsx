@@ -1,20 +1,30 @@
 import React, { useState } from 'react';
 import { MealSuggestion, AppState } from '../types';
+import { getRecommendedMealCount } from '../utils/calculationUtils';
 
 interface MealPlanDisplayProps {
   plan: MealSuggestion[];
-  onGenerate: (instruction?: string) => void;
+  onGenerate: (instruction?: string, mealCount?: number) => void;
+  onQuickLog: (meal: MealSuggestion) => void;
   appState: AppState;
+  remainingCalories: number;
 }
 
-const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ plan, onGenerate, appState }) => {
+const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ plan, onGenerate, onQuickLog, appState, remainingCalories }) => {
   const [tweakInput, setTweakInput] = useState('');
+  const [selectedCount, setSelectedCount] = useState<number | 'auto'>('auto');
   const isGenerating = appState === AppState.GENERATING_PLAN;
+  
+  const recommendedCount = getRecommendedMealCount(remainingCalories);
 
   const handleTweakSubmit = () => {
     if (!tweakInput.trim()) return;
-    onGenerate(tweakInput);
+    onGenerate(tweakInput, selectedCount === 'auto' ? undefined : selectedCount);
     setTweakInput('');
+  };
+
+  const handleGenerateClick = () => {
+     onGenerate(undefined, selectedCount === 'auto' ? undefined : selectedCount);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -25,7 +35,7 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ plan, onGenerate, app
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
         <h3 className="text-md font-semibold text-slate-800 flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -34,17 +44,36 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ plan, onGenerate, app
         </h3>
         
         {plan.length === 0 && (
-          <button
-            onClick={() => onGenerate()}
-            disabled={isGenerating}
-            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
-              isGenerating 
-                ? 'bg-slate-100 text-slate-400' 
-                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-            }`}
-          >
-            Generate Remaining Meals
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+             <div className="relative">
+                <select
+                  value={selectedCount}
+                  onChange={(e) => setSelectedCount(e.target.value === 'auto' ? 'auto' : parseInt(e.target.value))}
+                  disabled={isGenerating}
+                  className="appearance-none bg-white border border-slate-200 text-slate-700 text-xs py-1.5 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                   <option value="auto">Auto ({recommendedCount})</option>
+                   <option value="1">1 Meal</option>
+                   <option value="2">2 Meals</option>
+                   <option value="3">3 Meals</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+             </div>
+
+             <button
+              onClick={handleGenerateClick}
+              disabled={isGenerating}
+              className={`text-xs px-4 py-1.5 rounded-full font-medium transition-all flex-1 sm:flex-none text-center ${
+                isGenerating 
+                  ? 'bg-slate-100 text-slate-400' 
+                  : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm'
+              }`}
+            >
+              Generate Plan
+            </button>
+          </div>
         )}
       </div>
 
@@ -68,12 +97,24 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ plan, onGenerate, app
       {!isGenerating && plan.length > 0 && (
         <div className="grid gap-6">
           {plan.map((meal, idx) => (
-            <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden relative">
+            <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden relative group">
               <div className="bg-indigo-50/50 px-5 py-3 border-b border-indigo-50 flex justify-between items-center">
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded">
                   {meal.mealType}
                 </span>
-                <span className="text-xs font-medium text-slate-500">{meal.calories} kcal</span>
+                <div className="flex items-center gap-3">
+                   <span className="text-xs font-medium text-slate-500">{meal.calories} kcal</span>
+                   <button 
+                     onClick={() => onQuickLog(meal)}
+                     className="text-xs bg-white border border-indigo-100 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-600 hover:text-white transition-colors flex items-center gap-1 shadow-sm"
+                     title="Log this meal immediately"
+                   >
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                     </svg>
+                     Log
+                   </button>
+                </div>
               </div>
               
               <div className="p-5">

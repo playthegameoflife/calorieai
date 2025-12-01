@@ -101,7 +101,8 @@ export const generateAdaptivePlan = async (
   consumed: Macros,
   goals: DailyGoal,
   currentTime: Date,
-  customInstruction?: string
+  customInstruction?: string,
+  numberOfMeals?: number
 ): Promise<MealSuggestion[]> => {
   
   const remaining = {
@@ -113,7 +114,9 @@ export const generateAdaptivePlan = async (
 
   // Determine number of meals based on logic
   let mealStrategy = "";
-  if (remaining.calories < 400) {
+  if (numberOfMeals) {
+    mealStrategy = `Create exactly ${numberOfMeals} meal(s) that fit the remaining intake.`;
+  } else if (remaining.calories < 400) {
     mealStrategy = "Create 1 small meal/snack.";
   } else if (remaining.calories < 900) {
     mealStrategy = "Create 1 medium meal.";

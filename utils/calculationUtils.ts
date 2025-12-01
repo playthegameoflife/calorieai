@@ -79,6 +79,12 @@ export const calculateTargets = (profile: UserProfile): DailyGoal => {
   };
 };
 
+export const getRecommendedMealCount = (caloriesLeft: number): number => {
+  if (caloriesLeft < 400) return 1;
+  if (caloriesLeft < 900) return 2;
+  return 3;
+};
+
 export const DEFAULT_PROFILE: UserProfile = {
   gender: 'male',
   age: 30,
